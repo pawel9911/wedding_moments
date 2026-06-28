@@ -1,11 +1,25 @@
-// src/app/page.tsx
 "use client";
-import { useEffect, useState } from "react";
+
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { VALID_PINS } from "@/constant";
 
 export default function HomePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#0d070b] text-zinc-100 flex flex-col items-center justify-center p-6">
+          <div className="w-8 h-8 border-2 border-[#e05397] border-t-transparent rounded-full animate-spin" />
+        </main>
+      }
+    >
+      <PinVerificationContent />
+    </Suspense>
+  );
+}
+
+function PinVerificationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlPin = searchParams.get("pin");
@@ -16,18 +30,20 @@ export default function HomePage() {
   >("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // 1. Automatyczna weryfikacja PIN-u z kodu QR (URL)
+  const redirectToCapture = (validatedPin: string) => {
+    setStatus("success");
+    setTimeout(() => {
+      router.push(`/capture?pin=${encodeURIComponent(validatedPin)}`);
+    }, 1000);
+  };
+
   useEffect(() => {
     if (urlPin) {
       setStatus("checking");
 
-      // Małe opóźnienie dla płynności animacji (efekt "thinking")
       const timer = setTimeout(() => {
         if (VALID_PINS.includes(urlPin)) {
-          setStatus("success");
-          setTimeout(() => {
-            router.push(`/capture?pin=${urlPin || pinInput}`);
-          }, 1000);
+          redirectToCapture(urlPin);
         } else {
           setStatus("error");
           setErrorMessage("Kod QR zawiera nieaktywny lub niepoprawny PIN.");
@@ -36,9 +52,8 @@ export default function HomePage() {
 
       return () => clearTimeout(timer);
     }
-  }, [urlPin, router]);
+  }, [urlPin]);
 
-  // 2. Obsługa ręcznego wpisania PIN-u (gdy brak kodu QR)
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pinInput) return;
@@ -47,10 +62,7 @@ export default function HomePage() {
 
     setTimeout(() => {
       if (VALID_PINS.includes(pinInput)) {
-        setStatus("success");
-        setTimeout(() => {
-          router.push(`/capture?pin=${urlPin || pinInput}`);
-        }, 1000);
+        redirectToCapture(pinInput);
       } else {
         setStatus("error");
         setErrorMessage("Nieprawidłowy PIN. Spróbuj ponownie.");
@@ -64,14 +76,13 @@ export default function HomePage() {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 h-72 bg-[#e05397]/5 rounded-full blur-[60px] pointer-events-none" />
 
       <div className="w-full max-w-sm text-center z-10 space-y-8">
-        {/* Logo i Nagłówek */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           className="space-y-2"
         >
-          <div className="inline-flex p-3 bg-[#1a0f17] border border-[#291422] rounded-2xl text-[#e05397] font-bold text-xl shadow-inner mb-2">
+          <div className="inline-flex p-3 bg-[#1a0f17] border border-[#291422] rounded-2xl text-[#e05397] font-bold text-xl shadow-inner mb-2 select-none">
             📸
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-linear-to-b from-white to-pink-200 bg-clip-text text-transparent">
@@ -82,10 +93,8 @@ export default function HomePage() {
           </p>
         </motion.div>
 
-        {/* Kontener na stany aplikacji zarządzany przez Framer Motion */}
-        <div className="bg-[#160b13]/60 border border-[#2d1626] rounded-3xl p-6 backdrop-blur-md shadow-2xl min-h-55 flex flex-col justify-center">
+        <div className="bg-[#160b13]/60 border border-[#2d1626] rounded-3xl p-6 backdrop-blur-md shadow-2xl min-h-56 flex flex-col justify-center">
           <AnimatePresence mode="wait">
-            {/* Stan 1: Sprawdzanie / Walidacja kodu */}
             {status === "checking" && (
               <motion.div
                 key="checking"
@@ -101,7 +110,6 @@ export default function HomePage() {
               </motion.div>
             )}
 
-            {/* Stan 2: Sukces walidacji */}
             {status === "success" && (
               <motion.div
                 key="success"
@@ -119,7 +127,6 @@ export default function HomePage() {
               </motion.div>
             )}
 
-            {/* Stan 3: Ekran wpisywania ręcznego lub błąd */}
             {(status === "idle" || status === "error") && (
               <motion.div
                 key="form"
@@ -129,14 +136,14 @@ export default function HomePage() {
                 className="space-y-4"
               >
                 {status === "error" ? (
-                  // Komunikat o błędzie
                   <div className="space-y-3">
-                    <p className="text-sm text-rose-400 bg-rose-500/10 border border-rose-500/20 py-2.5 px-4 rounded-xl">
+                    <p className="text-sm text-rose-400 bg-rose-500/10 border border-rose-500/20 py-2.5 px-4 rounded-xlEl">
                       {errorMessage}
                     </p>
                     <button
+                      type="button"
                       onClick={() => setStatus("idle")}
-                      className="text-xs text-zinc-400 underline hover:text-zinc-200 transition"
+                      className="text-xs text-zinc-400 underline hover:text-zinc-200 transition cursor-pointer"
                     >
                       Wpisz kod ręcznie
                     </button>
@@ -154,17 +161,21 @@ export default function HomePage() {
                         type="text"
                         pattern="[0-9]*"
                         inputMode="numeric"
+                        autoComplete="one-time-code"
+                        autoFocus
                         maxLength={6}
-                        placeholder="- - - -"
+                        placeholder="••••"
                         value={pinInput}
-                        onChange={(e) => setPinInput(e.target.value)}
+                        onChange={(e) =>
+                          setPinInput(e.target.value.replace(/\D/g, ""))
+                        }
                         className="w-full bg-[#0d070b] border border-[#291422] focus:border-[#e05397] rounded-xl px-4 py-3 text-center font-mono text-lg tracking-widest text-white focus:outline-none transition shadow-inner"
                       />
                     </div>
                     <button
                       type="submit"
                       disabled={pinInput.length < 4}
-                      className="w-full bg-[#e05397] hover:bg-[#c23b7b] disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-medium py-3 rounded-xl transition shadow-lg text-sm"
+                      className="w-full bg-[#e05397] hover:bg-[#c23b7b] disabled:bg-zinc-800/80 disabled:text-zinc-500 text-white font-medium py-3 rounded-xl transition shadow-lg text-sm cursor-pointer disabled:cursor-not-allowed"
                     >
                       Wejdź do aplikacji
                     </button>
