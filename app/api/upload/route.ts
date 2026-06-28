@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Readable } from "node:stream";
 import { google } from "googleapis";
 import { VALID_PINS } from "@/constant";
 
@@ -21,7 +22,7 @@ function getGoogleAuth() {
   return new google.auth.JWT({
     email,
     key: rawPrivateKey.replaceAll("\\n", "\n"),
-    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+    scopes: ["https://www.googleapis.com/auth/drive.file"],
   });
 }
 
@@ -78,54 +79,59 @@ async function resolveDriveFolderId(drive: ReturnType<typeof google.drive>) {
   return cachedFolderId;
 }
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const pin = searchParams.get("pin");
+    const formData = await request.formData();
+    const file = formData.get("file");
+    const pin = formData.get("pin");
 
-    if (!pin || !VALID_PINS.includes(pin)) {
+    if (!(file instanceof File)) {
       return NextResponse.json(
-        { error: "Nieautoryzowany dostęp. Nieprawidłowy PIN." },
-        { status: 401 },
+        { error: "Brak pliku w żądaniu" },
+        { status: 400 },
       );
     }
 
-    const auth = getGoogleAuth();
-    const driveClient = google.drive({ version: "v3", auth });
-    const folderId = await resolveDriveFolderId(driveClient);
+    if (typeof pin !== "string" || !VALID_PINS.includes(pin)) {
+      return NextResponse.json({ error: "Nieprawidłowy PIN" }, { status: 401 });
+    }
 
-    const response = await driveClient.files.list({
-      q: `'${folderId}' in parents and trashed = false and mimeType contains 'image/'`,
-      fields:
-        "files(id, name, mimeType, createdTime, thumbnailLink, webContentLink)",
-      orderBy: "createdTime desc",
-      pageSize: 100,
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const auth = getGoogleAuth();
+    const drive = google.drive({ version: "v3", auth });
+    const folderId = await resolveDriveFolderId(drive);
+
+    const stream = Readable.from(buffer);
+    const fileMetadata = {
+      name: `wesele_[${pin}]_${Date.now()}_${file.name || "photo.jpg"}`,
+      parents: [folderId],
+    };
+
+    const media = {
+      mimeType: file.type || "image/jpeg",
+      body: stream,
+    };
+
+    const response = await drive.files.create({
+      requestBody: fileMetadata,
+      media,
+      fields: "id,name",
       supportsAllDrives: true,
     });
 
-    const files = response.data.files || [];
-    const photos = files.map((file) => ({
-      id: file.id ?? "",
-      url: file.thumbnailLink
-        ? file.thumbnailLink.replace(/=s\d+/, "=s800")
-        : (file.webContentLink ?? ""),
-      name: file.name,
-      createdAt: file.createdTime
-        ? new Date(file.createdTime).getTime()
-        : Date.now(),
-      isLocal: false,
-    }));
-
-    return NextResponse.json({ photos }, { status: 200 });
+    return NextResponse.json({
+      success: true,
+      storage: "google-drive",
+      fileId: response.data.id,
+      fileName: response.data.name,
+    });
   } catch (error: unknown) {
-    console.error("Błąd podczas pobierania zdjęć z Google Drive:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    console.error("Błąd Google Drive:", error);
+    const details = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      {
-        error: "Nie udało się pobrać galerii z chmury.",
-        details: errorMessage,
-      },
+      { error: "Błąd serwera podczas wysyłania", details },
       { status: 500 },
     );
   }
