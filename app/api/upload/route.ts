@@ -6,24 +6,20 @@ import { VALID_PINS } from "@/constant";
 let cachedFolderId: string | undefined;
 
 function getGoogleAuth() {
-  const email = process.env.GOOGLE_CLIENT_EMAIL;
-  const rawPrivateKey =
-    process.env.GOOGLE_PRIVATE_KEY ??
-    (process.env.GOOGLE_PRIVATE_KEY_BASE64
-      ? Buffer.from(process.env.GOOGLE_PRIVATE_KEY_BASE64, "base64").toString(
-          "utf8",
-        )
-      : undefined);
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
-  if (!email || !rawPrivateKey) {
-    throw new Error("Brak danych uwierzytelniających Google Drive.");
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error(
+      "Brak danych OAuth Google Drive. Uzupełnij GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET i GOOGLE_REFRESH_TOKEN.",
+    );
   }
 
-  return new google.auth.JWT({
-    email,
-    key: rawPrivateKey.replaceAll("\\n", "\n"),
-    scopes: ["https://www.googleapis.com/auth/drive.file"],
-  });
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+  return oauth2Client;
 }
 
 async function resolveDriveFolderId(drive: ReturnType<typeof google.drive>) {
@@ -130,9 +126,16 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error("Błąd Google Drive:", error);
     const details = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: "Błąd serwera podczas wysyłania", details },
-      { status: 500 },
-    );
+
+    const userMessage = details.includes(
+      "Service Accounts do not have storage quota",
+    )
+      ? "Konto Google użyte w aplikacji nie może zapisywać plików w zwykłym Drive. Użyj OAuth z właściwym kontem i folderem."
+      : details.includes("not have permission") ||
+          details.includes("Insufficient permissions")
+        ? "To konto Google nie ma uprawnień do tego folderu Drive."
+        : "Nie udało się zapisać zdjęcia na Google Drive. Sprawdź dane OAuth i dostęp do folderu.";
+
+    return NextResponse.json({ error: userMessage, details }, { status: 500 });
   }
 }

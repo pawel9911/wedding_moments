@@ -5,24 +5,20 @@ import { VALID_PINS } from "@/constant";
 let cachedFolderId: string | undefined;
 
 function getGoogleAuth() {
-  const email = process.env.GOOGLE_CLIENT_EMAIL;
-  const rawPrivateKey =
-    process.env.GOOGLE_PRIVATE_KEY ??
-    (process.env.GOOGLE_PRIVATE_KEY_BASE64
-      ? Buffer.from(process.env.GOOGLE_PRIVATE_KEY_BASE64, "base64").toString(
-          "utf8",
-        )
-      : undefined);
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
-  if (!email || !rawPrivateKey) {
-    throw new Error("Brak danych uwierzytelniających Google Drive.");
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error(
+      "Brak danych OAuth Google Drive. Uzupełnij GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET i GOOGLE_REFRESH_TOKEN.",
+    );
   }
 
-  return new google.auth.JWT({
-    email,
-    key: rawPrivateKey.replaceAll("\\n", "\n"),
-    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
-  });
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+  return oauth2Client;
 }
 
 async function resolveDriveFolderId(drive: ReturnType<typeof google.drive>) {
