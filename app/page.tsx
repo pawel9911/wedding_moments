@@ -76,10 +76,10 @@ export default function HomePage() {
             📸
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-linear-to-b from-white to-pink-200 bg-clip-text text-transparent">
-            PhotoDrop
+            Natalia & Paweł
           </h1>
           <p className="text-sm text-zinc-400">
-            Błyskawiczne i bezpieczne przesyłanie zdjęć
+            Przeżyjmy ten dzień razem i uchwyćmy najlepsze chwile
           </p>
         </motion.div>
 

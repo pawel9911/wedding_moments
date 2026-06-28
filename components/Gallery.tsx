@@ -19,7 +19,6 @@ const Gallery = ({
     { id: "all", label: "Wszystkie" },
     { id: "table", label: "Twój Stolik" },
     { id: "bride", label: "Młoda Para" },
-    { id: "guests", label: "Goście" },
   ];
 
   return (
@@ -52,7 +51,7 @@ const Gallery = ({
               />
 
               {/* Subtelny overlay informacyjny po najechaniu */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end text-left font-mono">
+              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end text-left font-mono">
                 <span className="text-[10px] text-pink-300 tracking-wider uppercase">
                   Oczekuje w kolejce
                 </span>
@@ -81,7 +80,7 @@ const Gallery = ({
                 <Image
                   src={selectedPhoto.previewUrl}
                   alt="Pełny widok zdjęcia"
-                  className="max-w-full max-h-[85vh] object-contain rounded-none shadow-2xl border border-white/[0.05]"
+                  className="max-w-full max-h-[85vh] object-contain rounded-none shadow-2xl border border-white/5"
                   fill
                   unoptimized
                 />
