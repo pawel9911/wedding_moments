@@ -1,18 +1,24 @@
 "use client";
+
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { OfflinePhoto } from "@/db/dexieDB";
-import Image from "next/image";
 
-const Gallery = ({
-  photos,
-  onDelete,
-}: {
-  photos: OfflinePhoto[];
-  onDelete: (id: number) => void;
-}) => {
-  const [selectedPhoto, setSelectedPhoto] = useState<OfflinePhoto | null>(null);
+// Definicja zunifikowanego interfejsu danych zintegrowanego ze stroną galerii
+interface UnifiedPhoto {
+  id: string;
+  url: string;
+  name?: string;
+  createdAt: number;
+  isLocal: boolean;
+}
 
+interface GalleryProps {
+  photos: UnifiedPhoto[];
+  onDelete: (id: string) => void;
+}
+
+const Gallery = ({ photos, onDelete }: GalleryProps) => {
+  const [selectedPhoto, setSelectedPhoto] = useState<UnifiedPhoto | null>(null);
   const [activeFilter, setActiveFilter] = useState("all");
 
   const filters = [
@@ -21,14 +27,22 @@ const Gallery = ({
     { id: "bride", label: "Młoda Para" },
   ];
 
+  // Filtrowanie zdjęć (na tym etapie filtrujemy wersje lokalne i zdalne, w przyszłości możesz dodać tagi)
+  const filteredPhotos = photos.filter((photo) => {
+    if (activeFilter === "all") return true;
+    // Przykład: Możesz przypisać odpowiednie tagi do zdjęć na podstawie logiki aplikacji
+    return true;
+  });
+
   return (
     <div className="w-full px-0 pt-2 pb-24 bg-[#0d070b] relative min-h-screen flex flex-col justify-between">
+      {/* Układ siatki Masonry (Wielokolumnowy CSS) */}
       <motion.div
         layout
-        className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-1 w-full space-y-1 px-1"
+        className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-2 w-full space-y-2 px-1"
       >
         <AnimatePresence mode="popLayout">
-          {photos.map((photo) => (
+          {filteredPhotos.map((photo) => (
             <motion.div
               key={photo.id}
               layoutId={`photo-container-${photo.id}`}
@@ -36,85 +50,121 @@ const Gallery = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
               whileHover={{
-                scale: 0.98,
+                scale: 0.99,
                 filter: "brightness(1.05)",
               }}
               transition={{ type: "spring", stiffness: 260, damping: 25 }}
-              className="break-inside-avoid relative overflow-hidden bg-[#160b13] cursor-pointer rounded-none border border-black/20 group inline-block w-full mb-1"
+              className="break-inside-avoid relative overflow-hidden bg-[#160b13] cursor-pointer rounded-xl border border-white/5 shadow-lg group inline-block w-full"
               onClick={() => setSelectedPhoto(photo)}
             >
-              {/* Dynamiczne zdjęcie - automatyczna wysokość (wyszukuje proporcje) */}
+              {/* Renderowanie zdjęcia z obsługą asynchronicznego ładowania proporcji */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={photo.previewUrl}
-                alt="Zdjęcie z wydarzenia"
-                className="w-full h-auto object-cover rounded-none transition-transform duration-700 group-hover:scale-102"
+                src={photo.url}
+                alt="Zdjęcie weselne"
+                className="w-full h-auto object-cover rounded-xl transition-transform duration-700 group-hover:scale-[1.01]"
+                loading="lazy"
               />
 
-              {/* Subtelny overlay informacyjny po najechaniu */}
-              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end text-left font-mono">
-                <span className="text-[10px] text-pink-300 tracking-wider uppercase">
-                  Oczekuje w kolejce
+              {/* Subtelny status i overlay zależny od tego, czy zdjęcie jest w chmurze czy lokalnie offline */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end text-left font-mono">
+                <span className="text-[10px] tracking-wider uppercase font-sans font-medium">
+                  {photo.isLocal ? (
+                    <span className="text-amber-400 animate-pulse">
+                      ⏳ Oczekuje w kolejce
+                    </span>
+                  ) : (
+                    <span className="text-emerald-400">
+                      ✨ Zapisano w albumie
+                    </span>
+                  )}
                 </span>
               </div>
+
+              {/* Stały wskaźnik stanu dla zdjęć offline w rogu ekranu, bez konieczności hovera */}
+              {photo.isLocal && (
+                <div className="absolute top-2 right-2 bg-amber-500/80 backdrop-blur-md text-white text-[9px] px-2 py-0.5 rounded-full font-mono animate-pulse">
+                  OFFLINE
+                </div>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
       </motion.div>
 
-      {/* DYNAMICZNY PODGLĄD PEŁNOEKRANOWY (MODAL) */}
+      {/* DYNAMICZNY PODGLĄD PEŁNOEKRANOWY (MODAL ANIMEPRESENCE) */}
       <AnimatePresence>
         {selectedPhoto && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#0d070b]/95 z-50 flex items-center justify-center p-0 backdrop-blur-md"
+            className="fixed inset-0 bg-[#0d070b]/95 z-50 flex items-center justify-center p-4 backdrop-blur-md"
             onClick={() => setSelectedPhoto(null)}
           >
             <motion.div
               layoutId={`photo-container-${selectedPhoto.id}`}
-              className="w-full max-w-5xl h-full max-h-[90vh] relative flex items-center justify-center p-4"
+              className="w-full max-w-4xl max-h-[85vh] relative flex flex-col items-center justify-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="relative w-full h-full flex items-center justify-center">
-                <Image
-                  src={selectedPhoto.previewUrl}
-                  alt="Pełny widok zdjęcia"
-                  className="max-w-full max-h-[85vh] object-contain rounded-none shadow-2xl border border-white/5"
-                  fill
-                  unoptimized
-                />
+              {/* Standardowy tag img gwarantuje perfekcyjne dopasowanie i zachowanie proporcji w oknie modalnym */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={selectedPhoto.url}
+                alt="Pełny widok zdjęcia"
+                className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl border border-white/5"
+              />
+
+              {/* Dolny panel informacyjny modalu */}
+              <div className="w-full max-w-2xl mt-4 flex justify-between items-end px-2 font-mono">
+                <div className="text-left">
+                  <p className="text-xs uppercase tracking-widest text-pink-400 font-semibold font-sans">
+                    {selectedPhoto.isLocal
+                      ? "Kolejka synchronizacji"
+                      : "Album weselny chmury"}
+                  </p>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">
+                    Data:{" "}
+                    {new Date(selectedPhoto.createdAt).toLocaleTimeString()}
+                  </p>
+                </div>
+
+                {/* Przycisk usuwania wyświetlany tylko dla lokalnych, niezsynchronizowanych zdjęć */}
+                {selectedPhoto.isLocal && (
+                  <button
+                    onClick={async () => {
+                      onDelete(selectedPhoto.id);
+                      setSelectedPhoto(null);
+                    }}
+                    className="bg-rose-950/40 border border-rose-500/30 text-rose-400 px-3 py-1.5 rounded-xl hover:bg-rose-500 hover:text-white transition-all text-xs font-sans font-medium"
+                  >
+                    Usuń zdjęcie
+                  </button>
+                )}
               </div>
 
+              {/* Przycisk zamknięcia */}
               <button
                 onClick={() => setSelectedPhoto(null)}
-                className="absolute top-6 right-6 bg-black/40 border border-white/10 text-white p-3 hover:bg-[#e05397] hover:border-[#e05397] transition-all duration-300 rounded-none backdrop-blur-md text-sm tracking-widest font-mono"
+                className="absolute -top-12 right-0 bg-white/5 border border-white/10 text-white w-10 h-10 hover:bg-[#e05397] hover:border-[#e05397] transition-all duration-300 rounded-full flex items-center justify-center text-sm"
               >
-                ZAMKNIJ ✕
+                ✕
               </button>
-
-              <div className="absolute bottom-6 left-6 text-left font-mono">
-                <p className="text-xs uppercase tracking-widest text-pink-400 font-semibold">
-                  Kolejka synchronizacji
-                </p>
-                <p className="text-[10px] text-zinc-500 mt-0.5">
-                  ID: {selectedPhoto.id}
-                </p>
-              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-2">
-        <div className="bg-[#160b13]/85 border border-[#2d1626] shadow-2xl backdrop-blur-md p-1.5 rounded-2xl flex justify-between items-center w-full overflow-x-auto no-scrollbar font-mono text-xs tracking-wider">
+      {/* DOLNY DIALOG FILTROWANIA */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-2 w-full max-w-xs sm:max-w-sm">
+        <div className="bg-[#160b13]/85 border border-[#2d1626] shadow-2xl backdrop-blur-md p-1.5 rounded-2xl flex justify-between items-center w-full font-mono text-xs tracking-wider">
           {filters.map((filter) => {
             const isSelected = activeFilter === filter.id;
             return (
               <button
                 key={filter.id}
                 onClick={() => setActiveFilter(filter.id)}
-                className={`relative px-4 py-2 flex-1 text-center transition-all duration-300 rounded-xl whitespace-nowrap ${
+                className={`relative px-3 py-2 flex-1 text-center transition-all duration-300 rounded-xl whitespace-nowrap text-[11px] font-sans ${
                   isSelected
                     ? "text-zinc-200 font-semibold bg-[#24111f] border border-[#e05397]/30"
                     : "text-zinc-400 hover:text-zinc-200 border border-transparent"
