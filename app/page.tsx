@@ -4,7 +4,22 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
-const VALID_PINS = ["1234", "5678", "9999"]; // Twoja prosta lista PIN-ów
+const VALID_PINS = [
+  "0001",
+  "0002",
+  "0003",
+  "0004",
+  "0005",
+  "0006",
+  "0007",
+  "0008",
+  "0009",
+  "0010",
+  "0011",
+  "0012",
+  "0013",
+  "0207",
+];
 
 export default function HomePage() {
   const router = useRouter();
@@ -156,7 +171,7 @@ export default function HomePage() {
                         pattern="[0-9]*"
                         inputMode="numeric"
                         maxLength={6}
-                        placeholder="Nasz przykład: 1234"
+                        placeholder="- - - -"
                         value={pinInput}
                         onChange={(e) => setPinInput(e.target.value)}
                         className="w-full bg-[#0d070b] border border-[#291422] focus:border-[#e05397] rounded-xl px-4 py-3 text-center font-mono text-lg tracking-widest text-white focus:outline-none transition shadow-inner"

@@ -6,7 +6,22 @@ import { db } from "@/db/dexieDB";
 import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 
-const VALID_PINS = ["1234", "5678", "9999"];
+const VALID_PINS = [
+  "0001",
+  "0002",
+  "0003",
+  "0004",
+  "0005",
+  "0006",
+  "0007",
+  "0008",
+  "0009",
+  "0010",
+  "0011",
+  "0012",
+  "0013",
+  "0207",
+];
 
 export default function CapturePage() {
   const searchParams = useSearchParams();
