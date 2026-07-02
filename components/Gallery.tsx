@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
 interface UnifiedPhoto {
   id: string;
@@ -28,18 +29,27 @@ const getOptimizedUrl = (url: string, size: number = 800) => {
 };
 
 const Gallery = ({ photos, onDelete }: GalleryProps) => {
+  const searchParams = useSearchParams();
+  const urlPin = searchParams.get("pin");
   const [selectedPhoto, setSelectedPhoto] = useState<UnifiedPhoto | null>(null);
   const [activeFilter, setActiveFilter] = useState("all");
 
   const filters = [
     { id: "all", label: "Wszystkie" },
-    { id: "table", label: "Twój Stolik" },
-    { id: "bride", label: "Młoda Para" },
+    { id: urlPin || "0207", label: "Twój Stolik" },
+    { id: "0207", label: "Młoda Para" },
   ];
 
   const filteredPhotos = photos.filter((photo) => {
     if (activeFilter === "all") return true;
-    return true;
+
+    const match = photo.name?.match(/\[(\d+)\]/);
+
+    if (!match) return false;
+
+    const photoPin = match[1];
+
+    return photoPin === activeFilter;
   });
 
   return (
