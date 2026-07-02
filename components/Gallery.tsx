@@ -138,10 +138,10 @@ const Gallery = ({ photos, onDelete }: GalleryProps) => {
                   <p className="text-xs uppercase tracking-widest text-pink-400 font-semibold font-sans">
                     {selectedPhoto.isLocal
                       ? "Kolejka synchronizacji"
-                      : "Album weselny chmury"}
+                      : "Album weselny"}
                   </p>
                   <p className="text-[10px] text-zinc-500 mt-0.5">
-                    Data:{" "}
+                    Godzina:{" "}
                     {new Date(selectedPhoto.createdAt).toLocaleTimeString()}
                   </p>
                 </div>
@@ -161,7 +161,7 @@ const Gallery = ({ photos, onDelete }: GalleryProps) => {
 
               <button
                 onClick={() => setSelectedPhoto(null)}
-                className="absolute -top-12 right-0 bg-white/5 border border-white/10 text-white w-10 h-10 hover:bg-[#e05397] hover:border-[#e05397] transition-all duration-300 rounded-full flex items-center justify-center text-sm"
+                className="absolute top-4 right-4 bg-white/5 border border-white/10 text-white w-10 h-10 hover:bg-[#e05397] hover:border-[#e05397] transition-all duration-300 rounded-full flex items-center justify-center text-sm"
               >
                 ✕
               </button>
